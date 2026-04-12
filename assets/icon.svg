@@ -1,0 +1,22 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="22" y1="18" x2="154" y2="166" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06B6D4"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="156" height="156" rx="34" fill="#070C14"/>
+  <rect x="16" y="16" width="148" height="148" rx="30" fill="url(#bg)" opacity="0.35"/>
+  <rect x="20" y="20" width="140" height="140" rx="28" fill="#090F1D"/>
+  <!-- Cookie shape -->
+  <circle cx="90" cy="90" r="36" fill="#93C5FD"/>
+  <!-- Chocolate chips -->
+  <circle cx="78" cy="78" r="5" fill="#090F1D"/>
+  <circle cx="98" cy="74" r="4" fill="#090F1D"/>
+  <circle cx="85" cy="98" r="5.5" fill="#090F1D"/>
+  <circle cx="104" cy="94" r="3.5" fill="#090F1D"/>
+  <!-- Cookie bite -->
+  <circle cx="115" cy="72" r="14" fill="#090F1D"/>
+  <!-- Magnifier handle -->
+  <path d="M108 108L128 128" stroke="#60A5FA" stroke-width="10" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,17 @@
+{
+  "name": "cookie-lab",
+  "version": "0.1.0-alpha",
+  "type": "module",
+  "private": true,
+  "description": "Client-side Cookie Lab - analyze, inspect, and export browser cookies",
+  "author": "Zig Zag",
+  "scripts": {
+    "build:css": "npx @tailwindcss/cli -i css/input.css -o css/styles.css --minify",
+    "watch:css": "npx @tailwindcss/cli -i css/input.css -o css/styles.css --watch",
+    "test": "node --test tests/*.test.js"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.0",
+    "tailwindcss": "^4.2.0"
+  }
+}
