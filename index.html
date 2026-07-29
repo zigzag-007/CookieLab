@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#050914">
+    <meta
+      name="description"
+      content="Analyze browser cookie tables locally, inspect scope and security observations, then export Netscape, JSON, or Cookie header formats."
+    >
+    <title>Cookie Lab · Local Cookie Analyzer</title>
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/styles.css?v=1.1.0">
+    <style>
+      :root {
+        --scrollbar-track: color-mix(in oklch, var(--background) 90%, var(--card));
+        --scrollbar-thumb: color-mix(in oklch, var(--primary) 27%, var(--border));
+      }
+      html:not(.dark) #theme-pill {
+        border-color: rgba(1, 128, 243, 0.24);
+        background-color: rgba(56, 189, 248, 0.15);
+        box-shadow: 0 0 18px -12px rgba(1, 128, 243, 0.45);
+      }
+      *::-webkit-scrollbar { width: 0.625rem; height: 0.625rem; }
+      *::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+      *::-webkit-scrollbar-thumb {
+        border: 0.15rem solid var(--scrollbar-track);
+        border-radius: 999px;
+        background: var(--scrollbar-thumb);
+      }
+      *::-webkit-scrollbar-thumb:hover { background: color-mix(in oklch, var(--primary) 50%, var(--border)); }
+      *::-webkit-scrollbar-corner { background: var(--scrollbar-track); }
+      .no-scrollbar::-webkit-scrollbar { width: 0; height: 0; }
+      @supports (-moz-appearance: none) {
+        * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
+        .no-scrollbar { scrollbar-width: none; }
+      }
+      .analyze-label-short { display: none; }
+      @media (max-width: 639px) {
+        .paste-action-row { width: 100%; }
+        .paste-action-row #clear-btn { flex: 1 1 0; min-height: 2.75rem; }
+        .paste-action-row #analyze-btn {
+          flex: 1 1 0;
+          min-width: 0;
+          min-height: 2.75rem;
+          padding-inline: 1rem;
+          white-space: nowrap;
+        }
+        .paste-action-row #analyze-btn svg { flex: none; }
+        .analyze-label-short { display: inline; }
+        .analyze-label-full { display: none; }
+      }
+      @media (max-width: 359px) {
+        .paste-action-row { flex-direction: column-reverse; }
+        .paste-action-row #clear-btn { width: 100%; }
+      }
+      .paged-section { min-width: 0; }
+      .paged-section-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 0.75rem;
+      }
+      .paged-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-left: auto;
+        color: var(--muted-foreground);
+        font-size: 0.75rem;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .paged-controls[hidden], .paged-progress[hidden] { display: none; }
+      .paged-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        background: var(--card);
+        color: var(--foreground);
+        transition: background-color 180ms ease, border-color 180ms ease, opacity 180ms ease, transform 120ms ease;
+      }
+      .paged-button:hover:not(:disabled) {
+        border-color: color-mix(in oklch, var(--primary) 50%, var(--border));
+        background: var(--accent);
+      }
+      .paged-button:disabled { cursor: not-allowed; opacity: 0.38; }
+      .paged-button svg { width: 1rem; height: 1rem; }
+      .paged-counter { min-width: 3.5rem; text-align: center; }
+      .paged-viewport {
+        min-width: 0;
+        touch-action: pan-y;
+        border-radius: var(--radius);
+      }
+      .paged-viewport:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+      .paged-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.75rem;
+      }
+      .paged-grid > * {
+        min-width: 0;
+        min-height: 7.5rem;
+        animation: paged-enter 220ms ease-out both;
+      }
+      .paged-progress {
+        display: flex;
+        width: min(48%, 17rem);
+        gap: 0.5rem;
+        margin: 1rem auto 0;
+      }
+      .paged-progress span {
+        flex: 1;
+        height: 0.3rem;
+        border-radius: 999px;
+        background: color-mix(in oklch, var(--border) 75%, var(--muted-foreground));
+        opacity: 0.7;
+        transition: background-color 180ms ease, opacity 180ms ease;
+      }
+      .paged-progress span.is-active { background: var(--primary); opacity: 1; }
+      @keyframes paged-enter {
+        from { opacity: 0.5; transform: translateX(0.35rem); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      @media (min-width: 640px) {
+        .paged-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+      @media (min-width: 1280px) {
+        .paged-sections { gap: 1.5rem; }
+        .paged-section + .paged-section {
+          border-left: 1px solid var(--border);
+          padding-left: 1.5rem;
+        }
+      }
+      @media (max-width: 359px) {
+        .paged-button { width: 2rem; height: 2rem; }
+        .paged-controls { gap: 0.25rem; }
+        .paged-counter { min-width: 3rem; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .paged-grid > * { animation: none; }
+        .paged-button, .paged-progress span { transition: none; }
+      }
+      .export-panel, .export-panel > * { min-width: 0; }
+      .export-panel-head, .export-panels, .export-action-card { display: grid; gap: 1rem; min-width: 0; }
+      .export-options { display: flex; flex-wrap: wrap; gap: 0.6rem 1.25rem; }
+      .export-panels { margin-top: 1.25rem; }
+      .export-action-card + .export-action-card {
+        border-top: 1px solid var(--border);
+        padding-top: 1.25rem;
+      }
+      .export-action-heading { display: flex; align-items: start; gap: 0.75rem; min-width: 0; }
+      .export-action-icon { width: 1.25rem; height: 1.25rem; flex: none; color: var(--primary); }
+      .export-format-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-width: 0;
+        min-height: 2.75rem;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        background: var(--card);
+        color: var(--foreground);
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: background-color 180ms ease, border-color 180ms ease;
+      }
+      .export-format-button:hover:not(:disabled) { background: var(--accent); }
+      .export-format-button.is-primary {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: var(--primary-foreground);
+        box-shadow: 0 8px 24px -10px color-mix(in oklch, var(--primary) 55%, transparent);
+      }
+      .export-format-button.is-primary:hover:not(:disabled) {
+        background: color-mix(in oklch, var(--primary) 88%, var(--card));
+      }
+      .export-format-button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .export-format-button svg { width: 1rem; height: 1rem; flex: none; }
+      .export-dropdown-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.625rem; min-width: 0; }
+      .export-select-wrap { position: relative; min-width: 0; }
+      .export-select-chevron {
+        position: absolute;
+        top: 50%;
+        right: 0.9rem;
+        width: 1rem;
+        height: 1rem;
+        color: var(--muted-foreground);
+        transform: translateY(-50%);
+        pointer-events: none;
+      }
+      .export-format-select {
+        appearance: none;
+        width: 100%;
+        min-width: 0;
+        min-height: 2.75rem;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        background: color-mix(in oklch, var(--card) 82%, var(--background));
+        color: var(--foreground);
+        padding: 0.5rem 2.6rem 0.5rem 0.85rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: background-color 180ms ease, border-color 180ms ease;
+      }
+      .export-format-select:hover:not(:disabled) { border-color: color-mix(in oklch, var(--primary) 50%, var(--border)); }
+      .export-format-select:disabled { opacity: 0.5; cursor: not-allowed; }
+      .export-dropdown-actions .export-format-button { min-height: 2.75rem; }
+      .export-format-select:focus-visible, .export-format-button:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+      }
+      .export-feedback {
+        margin-top: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 0.65rem 0.8rem;
+        font-size: 0.8125rem;
+        line-height: 1.4;
+      }
+      .export-feedback[hidden] { display: none; }
+      .export-feedback[data-kind="success"] {
+        border-color: color-mix(in oklch, var(--success) 35%, var(--border));
+        background: color-mix(in oklch, var(--success) 8%, var(--card));
+        color: var(--foreground);
+      }
+      .export-feedback[data-kind="error"] {
+        border-color: color-mix(in oklch, var(--destructive) 40%, var(--border));
+        background: color-mix(in oklch, var(--destructive) 10%, var(--card));
+        color: var(--foreground);
+      }
+      @media (min-width: 520px) {
+        .export-dropdown-actions { grid-template-columns: minmax(0, 1fr) minmax(7.5rem, 0.45fr); }
+      }
+      @media (min-width: 760px) {
+        .export-action-card { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); align-items: center; }
+      }
+      @media (min-width: 1100px) {
+        .export-panel-head { grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 1.5rem; }
+        .export-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+        .export-action-card, .export-action-card + .export-action-card {
+          grid-template-columns: minmax(0, 1fr);
+          align-items: start;
+          border: 1px solid var(--border);
+          border-radius: 0.875rem;
+          background: color-mix(in oklch, var(--card) 55%, var(--background));
+          padding: 1rem;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .export-format-button, .export-format-select { transition: none; }
+      }
+    </style>
+    <script>
+      (() => {
+        const savedTheme = localStorage.getItem('cookie-lab-theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if ((savedTheme || (prefersDark ? 'dark' : 'light')) === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      })();
+    </script>
+  </head>
+  <body class="min-h-dvh bg-background font-sans text-foreground">
+    <div class="relative min-h-dvh overflow-hidden bg-background">
+      <canvas
+        id="kinetic-grid"
+        class="kinetic-grid pointer-events-none fixed inset-0 z-0"
+        aria-hidden="true"
+      ></canvas>
+      <div
+        class="ambient-aurora pointer-events-none absolute inset-0 -z-10 opacity-90"
+        aria-hidden="true"
+      ></div>
+      <div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
+        <div class="absolute -top-20 left-1/2 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-blue-500/12 blur-[120px]"></div>
+        <div class="absolute top-64 -left-20 h-80 w-80 rounded-full bg-violet-500/12 blur-[120px]"></div>
+        <div class="absolute bottom-10 right-0 h-72 w-72 rounded-full bg-cyan-400/12 blur-[120px]"></div>
+      </div>
+      <div
+        id="cursor-glow"
+        class="cursor-glow pointer-events-none fixed inset-0 z-0"
+        aria-hidden="true"
+      ></div>
+
+      <div class="relative z-10 flex min-h-dvh flex-col">
+        <header class="sticky top-0 z-40 w-full shrink-0 border-b border-border/60 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55">
+          <div class="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+            <a href="#home" class="group flex min-w-0 items-center gap-2.5 tracking-tight">
+              <span
+                class="relative flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-gradient-to-br from-primary/15 via-primary/5 to-transparent text-primary shadow-sm transition-transform duration-300 group-hover:scale-105 sm:size-9 sm:rounded-xl"
+                aria-hidden="true"
+              >
+                <svg class="size-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5Z"></path>
+                  <path d="M8.5 8.5h.01M8 14h.01M14 15h.01"></path>
+                </svg>
+                <span class="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-primary/15"></span>
+              </span>
+              <span class="truncate font-display text-base leading-none sm:text-lg">
+                <span class="font-bold text-foreground">Cookie</span>
+                <span class="text-gradient font-semibold">Lab</span>
+              </span>
+              <span
+                class="version-badge-pulse hidden items-center rounded-full border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums tracking-wide text-primary backdrop-blur-sm min-[390px]:inline-flex dark:border-primary/50 dark:bg-primary/15"
+                title="Cookie Lab version 1.0.0"
+              >
+                v0.5.0
+              </span>
+            </a>
+
+            <button
+              id="theme-toggle"
+              type="button"
+              aria-label="Switch color theme"
+              class="group relative inline-flex h-10 w-[84px] shrink-0 select-none items-stretch gap-1 overflow-hidden rounded-full border border-border/70 bg-card/82 p-1 text-foreground shadow-sm backdrop-blur-xl transition-all duration-300 sm:w-[124px] dark:border-white/10 dark:bg-background/45"
+            >
+              <span
+                id="theme-pill"
+                class="pointer-events-none absolute left-1 top-1 h-8 w-9 translate-x-10 rounded-full border border-sky-500/20 bg-sky-950/72 shadow-[0_0_22px_-12px_rgba(56,189,248,0.8)] transition-all duration-500 ease-out sm:w-[56px] sm:translate-x-[60px] motion-reduce:transition-none"
+                aria-hidden="true"
+              ></span>
+              <span id="sun-icon" class="relative z-10 flex min-w-0 flex-1 items-center justify-center gap-1 rounded-full text-slate-400 transition-colors duration-300" aria-hidden="true">
+                <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+                </svg>
+                <span class="hidden text-[11px] font-medium sm:inline">Light</span>
+              </span>
+              <span id="moon-icon" class="relative z-10 flex min-w-0 flex-1 items-center justify-center gap-1 rounded-full text-white transition-colors duration-300" aria-hidden="true">
+                <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"></path>
+                </svg>
+                <span class="hidden text-[11px] font-medium sm:inline">Dark</span>
+              </span>
+            </button>
+          </div>
+        </header>
+
+        <main id="home" class="mx-auto w-full max-w-7xl flex-1 px-4 pb-8 pt-5 sm:px-6 sm:pt-7 lg:px-8">
+          <section aria-labelledby="page-title" class="animate-fade-up">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div class="max-w-3xl">
+                <h1 id="page-title" class="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-[2.5rem]">
+                  <span class="font-bold text-foreground">Cookie</span>
+                  <span class="text-gradient font-semibold">Lab</span>
+                </h1>
+                <p class="mt-2 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
+                  Paste a cookie table from browser DevTools. Cookie Lab analyzes status,
+                  domain scope, lifetime, and security flags entirely in your browser.
+                </p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/6 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+                    <svg class="size-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 3v18M3 12h18"></path>
+                    </svg>
+                    Local browser tool
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 rounded-full border border-success/25 bg-success/8 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-success">
+                    <span class="size-1.5 rounded-full bg-success shadow-[0_0_8px_currentColor]"></span>
+                    No uploads
+                  </span>
+                </div>
+              </div>
+              <p class="inline-flex w-fit shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-card/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
+                <span class="text-[10px] uppercase tracking-wide text-muted-foreground/80">Crafted by</span>
+                <span class="font-semibold text-foreground">Zig Zag</span>
+                <svg class="author-heart-glow size-3 text-rose-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 21s-7-4.35-9.33-8.18C.84 9.81 2.02 5.5 5.7 4.32 8.08 3.56 10.3 4.4 12 6.09c1.7-1.69 3.92-2.53 6.3-1.77 3.68 1.18 4.86 5.49 3.03 8.5C19 16.65 12 21 12 21Z"></path>
+                </svg>
+              </p>
+            </div>
+          </section>
+
+          <div id="status-banner" class="hidden" role="status" aria-live="polite"></div>
+
+          <section id="paste-view" aria-labelledby="paste-heading" class="mt-6">
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(19rem,0.75fr)] lg:gap-6">
+              <div class="glass-panel card-spotlight animate-fade-up delay-75 rounded-2xl border border-border bg-card p-4 sm:p-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Cookie input</p>
+                    <h2 id="paste-heading" class="mt-1.5 text-lg font-semibold text-foreground sm:text-xl">Paste your DevTools table</h2>
+                    <p class="mt-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                      Chrome or Edge: DevTools → Application → Cookies → select rows → copy.
+                    </p>
+                  </div>
+                  <span class="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-background/50 px-2.5 py-1 font-mono text-[10px] text-muted-foreground">
+                    Ctrl + Enter to analyze
+                  </span>
+                </div>
+
+                <label for="paste-input" class="sr-only">Tab separated cookie rows</label>
+                <textarea
+                  id="paste-input"
+                  rows="9"
+                  spellcheck="false"
+                  autocomplete="off"
+                  placeholder="Name&#9;Value&#9;Domain&#9;Path&#9;Expires / Max Age&#9;Size&#9;HttpOnly&#9;Secure&#9;SameSite"
+                  class="mt-4 min-h-56 w-full resize-y rounded-xl border border-border bg-background/80 p-4 font-mono text-xs leading-relaxed text-foreground shadow-sm outline-none ring-ring/50 transition-all placeholder:text-muted-foreground/45 focus-visible:border-primary focus-visible:bg-background focus-visible:ring-2 sm:text-sm lg:min-h-64"
+                ></textarea>
+
+                <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <svg class="size-3.5 text-success" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    Values stay in memory and never leave this page.
+                  </p>
+                  <div class="paste-action-row flex gap-2">
+                    <button
+                      id="clear-btn"
+                      type="button"
+                      class="inline-flex h-10 flex-1 items-center justify-center rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground transition-all hover:border-foreground/15 hover:bg-accent sm:flex-none"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      id="analyze-btn"
+                      type="button"
+                      class="cta-sheen inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_8px_24px_-10px_rgba(59,130,246,0.55)] transition-all hover:bg-primary/90 hover:shadow-[0_10px_28px_-8px_rgba(59,130,246,0.65)] sm:flex-none"
+                    >
+                      <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                      </svg>
+                      <span class="analyze-label-short">Analyze</span><span class="analyze-label-full">Analyze cookies</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <aside class="grid gap-4 animate-fade-up delay-150 lg:h-[28rem] lg:self-start" aria-label="How Cookie Lab works">
+                <article class="glass-panel card-spotlight hover-lift rounded-2xl border border-border bg-card p-4 sm:p-5">
+                  <span class="flex size-10 items-center justify-center rounded-xl bg-tile-blue text-tile-blue-foreground ring-1 ring-inset ring-tile-blue-foreground/15">
+                    <svg class="size-[1.125rem]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 3v18M3 12h18"></path>
+                    </svg>
+                  </span>
+                  <h3 class="mt-4 text-base font-semibold text-foreground">Paste once</h3>
+                  <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">Extra columns and surrounding whitespace are accepted. Invalid rows are reported clearly.</p>
+                </article>
+                <article class="glass-panel card-spotlight hover-lift rounded-2xl border border-border bg-card p-4 sm:p-5">
+                  <span class="flex size-10 items-center justify-center rounded-xl bg-tile-green text-tile-green-foreground ring-1 ring-inset ring-tile-green-foreground/15">
+                    <svg class="size-[1.125rem]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M20 13c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V5l8-3 8 3v8Z"></path>
+                      <path d="m9 12 2 2 4-4"></path>
+                    </svg>
+                  </span>
+                  <h3 class="mt-4 text-base font-semibold text-foreground">Private by design</h3>
+                  <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">No API calls, analytics, remote logging, or local storage of cookie values.</p>
+                </article>
+              </aside>
+            </div>
+          </section>
+
+          <section id="results-view" class="mt-6 hidden space-y-8" aria-label="Cookie analysis results">
+            <div id="skipped-warning" class="hidden"></div>
+
+            <section aria-labelledby="overview-heading">
+              <div class="mb-4 flex items-end justify-between gap-3">
+                <div>
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Overview</p>
+                  <h2 id="overview-heading" class="mt-1 text-xl font-semibold text-foreground">At a glance</h2>
+                </div>
+                <button id="new-analysis-btn" type="button" class="inline-flex h-9 items-center rounded-xl border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent">
+                  New analysis
+                </button>
+              </div>
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                <article class="glass-panel card-spotlight rounded-2xl border border-border bg-card p-4">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total</p>
+                  <p id="stat-total" class="mt-2 font-display text-2xl font-bold text-foreground">0</p>
+                </article>
+                <article class="glass-panel card-spotlight rounded-2xl border border-border bg-card p-4">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-success">Live</p>
+                  <p id="stat-live" class="mt-2 font-display text-2xl font-bold text-foreground">0</p>
+                </article>
+                <article class="glass-panel card-spotlight rounded-2xl border border-border bg-card p-4">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-primary">Session</p>
+                  <p id="stat-session" class="mt-2 font-display text-2xl font-bold text-foreground">0</p>
+                </article>
+                <article class="glass-panel card-spotlight rounded-2xl border border-border bg-card p-4">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-destructive">Expired</p>
+                  <p id="stat-expired" class="mt-2 font-display text-2xl font-bold text-foreground">0</p>
+                </article>
+                <article class="glass-panel card-spotlight rounded-2xl border border-border bg-card p-4">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Domains</p>
+                  <p id="stat-domains" class="mt-2 font-display text-2xl font-bold text-foreground">0</p>
+                </article>
+                <article class="glass-panel card-spotlight rounded-2xl border border-border bg-card p-4">
+                  <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Selected</p>
+                  <p id="stat-selected" class="mt-2 font-display text-2xl font-bold text-foreground">0</p>
+                </article>
+              </div>
+            </section>
+
+            <div class="paged-sections grid grid-cols-1 gap-8 xl:grid-cols-2">
+              <section class="paged-section" aria-labelledby="domains-heading">
+                <div class="paged-section-heading mb-5">
+                  <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Matching scope</p>
+                    <h2 id="domains-heading" class="mt-1 text-xl font-semibold text-foreground">Domain summary</h2>
+                  </div>
+                  <div id="domain-controls" class="paged-controls" hidden>
+                    <button id="domain-previous" class="paged-button" type="button" aria-label="Previous Domain summary page" aria-controls="domain-summary" disabled>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+                    </button>
+                    <span id="domain-page-count" class="paged-counter" aria-live="polite" aria-atomic="true"></span>
+                    <button id="domain-next" class="paged-button" type="button" aria-label="Next Domain summary page" aria-controls="domain-summary">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    </button>
+                  </div>
+                </div>
+                <div id="domain-viewport" class="paged-viewport" role="region" aria-roledescription="carousel" aria-labelledby="domains-heading" aria-keyshortcuts="ArrowLeft ArrowRight" tabindex="0">
+                  <div id="domain-summary" class="paged-grid"></div>
+                </div>
+                <div id="domain-progress" class="paged-progress" aria-hidden="true" hidden></div>
+              </section>
+
+              <section class="paged-section" aria-labelledby="observations-heading">
+                <div class="paged-section-heading mb-5">
+                  <div>
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Audit notes</p>
+                    <h2 id="observations-heading" class="mt-1 text-xl font-semibold text-foreground">Observations</h2>
+                  </div>
+                  <div id="observations-controls" class="paged-controls" hidden>
+                    <button id="observations-previous" class="paged-button" type="button" aria-label="Previous Observations page" aria-controls="security-observations" disabled>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg>
+                    </button>
+                    <span id="observations-page-count" class="paged-counter" aria-live="polite" aria-atomic="true"></span>
+                    <button id="observations-next" class="paged-button" type="button" aria-label="Next Observations page" aria-controls="security-observations">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+                    </button>
+                  </div>
+                </div>
+                <div id="observations-viewport" class="paged-viewport" role="region" aria-roledescription="carousel" aria-labelledby="observations-heading" aria-keyshortcuts="ArrowLeft ArrowRight" tabindex="0">
+                  <div id="security-observations" class="paged-grid"></div>
+                </div>
+                <div id="observations-progress" class="paged-progress" aria-hidden="true" hidden></div>
+              </section>
+            </div>
+
+            <section aria-labelledby="inventory-heading">
+              <div class="glass-panel rounded-2xl border border-border bg-card">
+                <div class="border-b border-border/70 p-4 sm:p-5">
+                  <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="size-2 rounded-full bg-success shadow-[0_0_10px_rgba(34,197,94,0.6)]"></span>
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Inventory</p>
+                      </div>
+                      <h2 id="inventory-heading" class="mt-1.5 text-xl font-semibold text-foreground">Cookie records</h2>
+                      <p class="mt-1 text-xs text-muted-foreground">Cookie values stay hidden. Select a row to inspect its scope and flags.</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                      <label class="relative block">
+                        <span class="sr-only">Search cookie name or domain</span>
+                        <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                          <circle cx="11" cy="11" r="8"></circle>
+                          <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                        <input id="search-input" type="search" placeholder="Search cookies" class="h-10 w-full rounded-xl border border-border bg-background/70 pl-9 pr-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary">
+                      </label>
+                      <label>
+                        <span class="sr-only">Filter by status</span>
+                        <select id="status-filter" class="h-10 w-full rounded-xl border border-border bg-background/70 px-3 text-sm text-foreground outline-none">
+                          <option value="all">All statuses</option>
+                          <option value="live">Live</option>
+                          <option value="session">Session</option>
+                          <option value="expired">Expired</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span class="sr-only">Filter by domain</span>
+                        <select id="domain-filter" class="h-10 w-full rounded-xl border border-border bg-background/70 px-3 text-sm text-foreground outline-none">
+                          <option value="all">All domains</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span class="sr-only">Filter by export selection</span>
+                        <select id="export-state-filter" class="h-10 w-full rounded-xl border border-border bg-background/70 px-3 text-sm text-foreground outline-none">
+                          <option value="all">All selections</option>
+                          <option value="selected">Selected</option>
+                          <option value="unselected">Unselected</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs text-muted-foreground"><span id="visible-count">0 of 0</span> visible</p>
+                    <div class="flex flex-wrap gap-2">
+                      <button id="select-visible-btn" type="button" class="inline-flex h-8 items-center rounded-lg border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent">Select visible</button>
+                      <button id="unselect-visible-btn" type="button" class="inline-flex h-8 items-center rounded-lg border border-border bg-card px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent">Unselect visible</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="no-scrollbar overflow-x-auto">
+                  <table class="w-full min-w-[1180px] border-collapse text-left">
+                    <thead class="bg-muted/60">
+                      <tr class="border-b border-border/70">
+                        <th class="w-10 px-3 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Use</th>
+                        <th class="w-8 px-2 py-3" scope="col"><span class="sr-only">Expand details</span></th>
+                        <th data-sort="name" class="cursor-pointer px-3 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Name<span class="sort-arrow opacity-0"></span></th>
+                        <th data-sort="domain" class="cursor-pointer px-3 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Domain<span class="sort-arrow opacity-0"></span></th>
+                        <th data-sort="status" class="cursor-pointer px-3 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Status<span class="sort-arrow opacity-0"></span></th>
+                        <th data-sort="expirationTimestamp" class="cursor-pointer px-3 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Expires<span class="sort-arrow opacity-0"></span></th>
+                        <th data-sort="remainingLifetime" class="cursor-pointer px-3 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Remaining<span class="sort-arrow opacity-0"></span></th>
+                        <th data-sort="originalLifetime" class="cursor-pointer px-3 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Lifetime<span class="sort-arrow opacity-0"></span></th>
+                        <th class="px-3 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Security</th>
+                        <th data-sort="size" class="cursor-pointer px-3 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Size<span class="sort-arrow opacity-0"></span></th>
+                        <th class="px-3 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" scope="col">Scope</th>
+                      </tr>
+                    </thead>
+                    <tbody id="cookie-tbody" class="divide-y divide-border/40"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+              <section aria-labelledby="export-heading" class="export-panel glass-panel card-spotlight rounded-2xl border border-border bg-card p-4 sm:p-5">
+                <div class="export-panel-head">
+                  <div class="max-w-xl">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Cookie export</p>
+                    <h2 id="export-heading" class="mt-1 text-xl font-semibold text-foreground">Export selected cookies</h2>
+                    <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">Choose a format, then download or copy your selected cookies.</p>
+                  </div>
+                  <div class="export-options" role="group" aria-label="Export inclusion options">
+                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground"><input id="include-session" type="checkbox" checked class="size-4 rounded border-border accent-primary"> Include session</label>
+                    <label class="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground"><input id="include-expired" type="checkbox" class="size-4 rounded border-border accent-primary"> Include expired</label>
+                  </div>
+                </div>
+                <div class="export-panels">
+                  <div class="export-action-card">
+                    <div class="export-action-heading">
+                      <svg class="export-action-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5M12 15V3"></path></svg>
+                      <div><h3 class="font-semibold text-foreground">Download</h3><p class="text-xs leading-relaxed text-muted-foreground">Save selected cookies to a file.</p></div>
+                    </div>
+                    <div class="export-dropdown-actions">
+                      <div class="export-select-wrap">
+                        <label class="sr-only" for="download-format-select">Download format</label>
+                        <select id="download-format-select" class="export-format-select"><option value="netscape">Netscape</option><option value="json">JSON</option><option value="header">Header string</option></select>
+                        <svg class="export-select-chevron" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                      </div>
+                      <button id="download-dropdown-btn" type="button" class="export-format-button is-primary" aria-label="Download selected cookies in the chosen format">Download</button>
+                    </div>
+                  </div>
+                  <div class="export-action-card">
+                    <div class="export-action-heading">
+                      <svg class="export-action-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+                      <div><h3 class="font-semibold text-foreground">Copy to clipboard</h3><p class="text-xs leading-relaxed text-muted-foreground">Copy selected cookies in a specific format.</p></div>
+                    </div>
+                    <div class="export-dropdown-actions">
+                      <div class="export-select-wrap">
+                        <label class="sr-only" for="copy-format-select">Copy format</label>
+                        <select id="copy-format-select" class="export-format-select"><option value="netscape">Netscape</option><option value="json">JSON</option><option value="header">Header string</option></select>
+                        <svg class="export-select-chevron" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+                      </div>
+                      <button id="copy-dropdown-btn" type="button" class="export-format-button" aria-label="Copy selected cookies in the chosen format">Copy</button>
+                    </div>
+                  </div>
+                </div>
+                <p id="export-feedback" class="export-feedback" role="status" aria-live="polite" hidden></p>
+              </section>
+          </section>
+        </main>
+
+        <footer class="shrink-0 border-t border-border bg-background">
+          <div class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+            <p class="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-center text-sm font-semibold text-muted-foreground/80 sm:text-base">
+              <span>Copyright © 2026 Cookie Lab.</span>
+              <span>All Rights Reserved.</span>
+              <span class="inline-flex items-center gap-1">
+                Made with
+                <svg class="footer-heart-glow size-4 text-rose-500" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 21s-7-4.35-9.33-8.18C.84 9.81 2.02 5.5 5.7 4.32 8.08 3.56 10.3 4.4 12 6.09c1.7-1.69 3.92-2.53 6.3-1.77 3.68 1.18 4.86 5.49 3.03 8.5C19 16.65 12 21 12 21Z"></path>
+                </svg>
+                by Zig Zag
+              </span>
+            </p>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <script type="module" src="js/app.js?v=0.5.0"></script>
+  </body>
+</html>
