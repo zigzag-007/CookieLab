@@ -51,10 +51,6 @@
         .analyze-label-short { display: inline; }
         .analyze-label-full { display: none; }
       }
-      @media (max-width: 359px) {
-        .paste-action-row { flex-direction: column-reverse; }
-        .paste-action-row #clear-btn { width: 100%; }
-      }
       .paged-section { min-width: 0; }
       .paged-section-heading {
         display: grid;
@@ -138,7 +134,6 @@
         }
       }
       @media (max-width: 359px) {
-        .paged-button { width: 2rem; height: 2rem; }
         .paged-controls { gap: 0.25rem; }
         .paged-counter { min-width: 3rem; }
       }
@@ -258,6 +253,7 @@
         .export-format-button, .export-format-select { transition: none; }
       }
     </style>
+    <link rel="stylesheet" href="css/responsive.css?v=1.0.0">
     <script>
       (() => {
         const savedTheme = localStorage.getItem('cookie-lab-theme');
@@ -271,7 +267,7 @@
     </script>
   </head>
   <body class="min-h-dvh bg-background font-sans text-foreground">
-    <div class="relative min-h-dvh overflow-hidden bg-background">
+    <div class="site-shell relative min-h-dvh overflow-hidden bg-background">
       <canvas
         id="kinetic-grid"
         class="kinetic-grid pointer-events-none fixed inset-0 z-0"
@@ -312,9 +308,9 @@
               </span>
               <span
                 class="version-badge-pulse hidden items-center rounded-full border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-semibold tabular-nums tracking-wide text-primary backdrop-blur-sm min-[390px]:inline-flex dark:border-primary/50 dark:bg-primary/15"
-                title="Cookie Lab version 0.8.0"
+                title="Cookie Lab version 1.0.0"
               >
-                v0.8.0
+                v1.0.0
               </span>
             </a>
 
@@ -348,7 +344,7 @@
 
         <main id="home" class="mx-auto w-full max-w-7xl flex-1 px-4 pb-8 pt-5 sm:px-6 sm:pt-7 lg:px-8">
           <section aria-labelledby="page-title" class="animate-fade-up">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div class="hero-layout flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div class="max-w-3xl">
                 <h1 id="page-title" class="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-[2.5rem]">
                   <span class="font-bold text-foreground">Cookie</span>
@@ -382,19 +378,17 @@
           <div id="status-banner" class="hidden" role="status" aria-live="polite"></div>
 
           <section id="paste-view" aria-labelledby="paste-heading" class="mt-6">
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(19rem,0.75fr)] lg:gap-6">
-              <div class="glass-panel card-spotlight animate-fade-up delay-75 rounded-2xl border border-border bg-card p-4 sm:p-5">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Cookie input</p>
-                    <h2 id="paste-heading" class="mt-1.5 text-lg font-semibold text-foreground sm:text-xl">Paste your DevTools table</h2>
-                    <p class="mt-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">
-                      Chrome or Edge: DevTools → Application → Cookies → select rows → copy.
-                    </p>
-                  </div>
-                  <span class="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-background/50 px-2.5 py-1 font-mono text-[10px] text-muted-foreground">
-                    Ctrl + Enter to analyze
+            <div class="paste-layout">
+              <div class="paste-panel glass-panel card-spotlight animate-fade-up delay-75 rounded-2xl border border-border bg-card p-4 sm:p-5">
+                <div class="paste-panel-heading">
+                  <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Cookie input</p>
+                  <span class="shortcut-hint" title="Press Ctrl + Enter to analyze your cookie table">
+                    <kbd>Ctrl + Enter</kbd><span class="shortcut-detail"> to analyze</span>
                   </span>
+                  <h2 id="paste-heading" class="mt-1.5 text-lg font-semibold text-foreground sm:text-xl">Paste your DevTools table</h2>
+                  <p class="paste-instructions mt-1 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                    Chrome or Edge: DevTools → Application → Cookies → select rows → copy.
+                  </p>
                 </div>
 
                 <label for="paste-input" class="sr-only">Tab separated cookie rows</label>
@@ -403,12 +397,13 @@
                   rows="9"
                   spellcheck="false"
                   autocomplete="off"
+                  aria-keyshortcuts="Control+Enter Meta+Enter"
                   placeholder="Name&#9;Value&#9;Domain&#9;Path&#9;Expires / Max Age&#9;Size&#9;HttpOnly&#9;Secure&#9;SameSite"
                   class="mt-4 min-h-56 w-full resize-y rounded-xl border border-border bg-background/80 p-4 font-mono text-xs leading-relaxed text-foreground shadow-sm outline-none ring-ring/50 transition-all placeholder:text-muted-foreground/45 focus-visible:border-primary focus-visible:bg-background focus-visible:ring-2 sm:text-sm lg:min-h-64"
                 ></textarea>
 
-                <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p class="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div class="paste-panel-footer mt-4">
+                  <p class="privacy-note inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                     <svg class="size-3.5 text-success" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
                       <rect x="3" y="11" width="18" height="10" rx="2"></rect>
                       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -438,7 +433,7 @@
                 </div>
               </div>
 
-              <aside class="grid gap-4 animate-fade-up delay-150 lg:h-[28rem] lg:self-start" aria-label="How Cookie Lab works">
+              <aside class="paste-features animate-fade-up delay-150" aria-label="How Cookie Lab works">
                 <article class="glass-panel card-spotlight hover-lift rounded-2xl border border-border bg-card p-4 sm:p-5">
                   <span class="flex size-10 items-center justify-center rounded-xl bg-tile-blue text-tile-blue-foreground ring-1 ring-inset ring-tile-blue-foreground/15">
                     <svg class="size-[1.125rem]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
@@ -475,7 +470,7 @@
                   New analysis
                 </button>
               </div>
-              <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <div class="overview-grid grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 <article class="glass-panel card-spotlight rounded-2xl border border-border bg-card p-4">
                   <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total</p>
                   <p id="stat-total" class="mt-2 font-display text-2xl font-bold text-foreground">0</p>
@@ -561,7 +556,7 @@
                       <h2 id="inventory-heading" class="mt-1.5 text-xl font-semibold text-foreground">Cookie records</h2>
                       <p class="mt-1 text-xs text-muted-foreground">Cookie values stay hidden. Select a row to inspect its scope and flags.</p>
                     </div>
-                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="inventory-filters grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
                       <label class="relative block">
                         <span class="sr-only">Search cookie name or domain</span>
                         <svg class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">

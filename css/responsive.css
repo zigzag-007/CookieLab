@@ -1,0 +1,136 @@
+/* Use the available card space, not only the screen width. */
+html, body { overflow-x: clip; }
+.site-shell { overflow: clip; }
+header > div, #home, footer > div {
+  padding-inline: clamp(0.875rem, 2.5vw, 2rem);
+}
+#home { padding-top: clamp(1.125rem, 2.4vw, 1.75rem); scroll-margin-top: 4.5rem; }
+#page-title {
+  font-size: clamp(1.875rem, 1.25rem + 2vw, 2.5rem);
+  line-height: 1.15;
+}
+.hero-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+.hero-layout > div { min-width: 0; }
+.hero-layout > div > p { font-size: clamp(0.875rem, 0.8rem + 0.2vw, 1rem); }
+.hero-layout > p { align-self: end; }
+#paste-view, #results-view { margin-top: clamp(1.25rem, 2vw, 1.5rem); }
+#results-view > :not(:first-child) { margin-top: clamp(1.5rem, 3vw, 2rem); }
+.paste-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; }
+.paste-panel { min-width: 0; container-type: inline-size; padding: clamp(0.875rem, 1.6vw, 1.25rem); }
+.card-spotlight > .sr-only { position: absolute; }
+.paste-panel-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.75rem;
+}
+.paste-panel-heading > h2, .paste-instructions { grid-column: 1 / -1; }
+#paste-heading { font-size: clamp(1.0625rem, 0.95rem + 0.3vw, 1.25rem); line-height: 1.4; }
+.shortcut-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 0.35em;
+  flex-shrink: 0;
+  white-space: nowrap;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--background) 50%, transparent);
+  padding: 0.25rem 0.625rem;
+  color: var(--muted-foreground);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.625rem;
+  line-height: 1.5;
+}
+.shortcut-hint kbd { font: inherit; }
+#paste-input {
+  display: block;
+  height: clamp(13rem, 23vw, 15rem);
+  min-height: 12rem;
+  padding: clamp(0.75rem, 1.25vw, 1rem);
+  margin-top: 1.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  transition-property: border-color, background-color, box-shadow;
+}
+.paste-panel-footer { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+.privacy-note { order: 2; align-items: start; line-height: 1.6; }
+.privacy-note svg { flex: none; margin-top: 0.15rem; }
+.paste-action-row { justify-content: flex-end; }
+.paste-action-row button { min-width: 0; min-height: 2.75rem; white-space: nowrap; }
+.paste-features { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; min-width: 0; }
+.paste-features article { min-width: 0; padding: clamp(0.875rem, 1.6vw, 1.25rem); }
+.paste-features article > span { width: 2.25rem; height: 2.25rem; }
+.paste-features h3 { margin-top: 0.75rem; font-size: 0.9375rem; }
+.paste-features p { font-size: 0.875rem; }
+.overview-grid article { padding: clamp(0.75rem, 1.4vw, 1rem); }
+.overview-grid article > p:last-child { font-size: clamp(1.375rem, 1.1rem + 0.5vw, 1.5rem); }
+.paged-section { container-type: inline-size; }
+.paged-section-heading { margin-bottom: 1rem; }
+.paged-section-heading h2, #overview-heading, #inventory-heading, #export-heading {
+  font-size: clamp(1.0625rem, 0.95rem + 0.3vw, 1.25rem);
+  line-height: 1.4;
+}
+.paged-button:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.paged-button:active:not(:disabled) { transform: scale(0.96); }
+.paged-grid > * { overflow-wrap: anywhere; }
+.paged-progress { max-width: 100%; }
+.inventory-filters { min-width: 0; }
+.inventory-filters label { min-width: 0; }
+.inventory-filters input, .inventory-filters select { min-width: 0; }
+.inventory-filters input:focus-visible, .inventory-filters select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.export-options label { min-height: 2.75rem; }
+footer p { font-size: clamp(0.75rem, 0.65rem + 0.3vw, 0.875rem); line-height: 1.7; }
+
+@container (max-width: 26rem) {
+  .shortcut-detail { display: none; }
+}
+@container (min-width: 38rem) {
+  .paste-panel-footer { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem; }
+  .privacy-note { order: 0; }
+}
+@container (max-width: 22rem) {
+  .paged-section-heading { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 0.625rem; }
+  .paged-controls { margin-left: 0; }
+}
+@media (min-width: 540px) {
+  .paste-features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 760px) {
+  .hero-layout { grid-template-columns: minmax(0, 1fr) auto; gap: 1.5rem; }
+}
+@media (min-width: 1100px) {
+  .paste-layout { grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr); gap: 1.5rem; }
+  .paste-features { grid-template-columns: minmax(0, 1fr); }
+  .paste-features article { min-height: 10.75rem; }
+}
+@media (max-width: 1099px) {
+  .overview-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 639px) {
+  .overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; }
+  .paste-instructions { font-size: 0.8125rem; }
+  #paste-input { font-size: 1rem; }
+  .paste-action-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .paste-action-row button { height: 2.75rem; }
+  .export-options { gap: 0.25rem 0.875rem; }
+  .export-options label { font-size: 0.8125rem; }
+  .inventory-filters input, .inventory-filters select { font-size: 1rem; min-height: 2.75rem; }
+  .export-format-select { font-size: 1rem; }
+  #new-analysis-btn, #select-visible-btn, #unselect-visible-btn { min-height: 2.75rem; }
+  .paged-button { width: 2.75rem; height: 2.75rem; }
+  .export-panel { padding: 0.875rem; }
+}
+@media (pointer: coarse) {
+  #theme-toggle, .paged-button, #new-analysis-btn, #select-visible-btn, #unselect-visible-btn { min-height: 2.75rem; }
+  .paged-button { min-width: 2.75rem; }
+  #theme-pill { top: calc(50% - 1rem); }
+  #paste-input, .inventory-filters input, .inventory-filters select { font-size: 1rem; }
+  .export-format-select { font-size: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .paged-button:active:not(:disabled) { transform: none; }
+}

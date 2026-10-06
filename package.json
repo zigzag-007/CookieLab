@@ -1,6 +1,6 @@
 {
   "name": "cookie-lab",
-  "version": "0.8.0",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
   "description": "Client-side Cookie Lab - analyze, inspect, and export browser cookies",
